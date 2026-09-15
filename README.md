@@ -17,9 +17,9 @@ Deployed on Vercel. The production URL is available in the Design Arena preview 
 
 ## Admin Access
 
-- **URL:** `/login`
-- **Email:** `admin@peaceapparel.com`
-- **Password:** `PeaceAdmin2024`
+- **URL:** `/####`
+- **Email:** ``
+- **Password:** ``
 
 ## Features
 
