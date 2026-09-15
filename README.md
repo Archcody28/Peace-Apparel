@@ -18,8 +18,8 @@ Deployed on Vercel. The production URL is available in the Design Arena preview 
 ## Admin Access
 
 - **URL:** `/####`
-- **Email:** ``
-- **Password:** ``
+- **Email:** `####`
+- **Password:** `###`
 
 ## Features
 
