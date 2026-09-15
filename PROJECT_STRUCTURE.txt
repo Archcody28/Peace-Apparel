@@ -1,0 +1,78 @@
+Project folder structure for peace-apparel
+
+Dockerfile
+eslint.config.js
+index.html
+package.json
+README.md
+tsconfig.app.json
+tsconfig.json
+tsconfig.node.json
+vercel.json
+vite.config.ts
+
+api/
+  admin-auth.js
+  analytics.js
+  categories.js
+  db-client.js
+  db-wake.js
+  homepage-features.js
+  orders.js
+  products.js
+  register-admin.js
+  settings.js
+  subscribers.js
+  testimonials.js
+  upload.js
+  verify-payment.js
+
+public/
+  robots.txt
+  site.webmanifest
+  sitemap.xml
+  images/
+
+scripts/
+  create-admin.js
+  generate-admin-token.js
+
+src/
+  App.css
+  App.tsx
+  index.css
+  main.tsx
+  assets/
+  components/
+    CartDrawer.jsx
+    CheckoutModal.jsx
+    CommandPalette.jsx
+    Footer.jsx
+    ImageGallery.jsx
+    LivePurchaseToast.jsx
+    MobileNav.jsx
+    Navbar.jsx
+    NewsletterPopup.jsx
+    PaystackPayment.jsx
+    ProductCard.jsx
+    ProtectedAdmin.jsx
+    QuickViewModal.jsx
+    ScrollReveal.jsx
+    SimpleDoughnutChart.jsx
+    SimpleLineChart.jsx
+    TestimonialWall.jsx
+  contexts/
+    AuthContext.jsx
+    CartContext.jsx
+  lib/
+    supabase.js
+    utils.js
+  pages/
+    About.jsx
+    AdminDashboard.jsx
+    Contact.jsx
+    Home.jsx
+    Login.jsx
+    NotFound.jsx
+    ProductDetails.jsx
+    Products.jsx

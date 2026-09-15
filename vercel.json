@@ -1,0 +1,45 @@
+{
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "",
+    "SUPABASE_SERVICE_ROLE_KEY": "",
+    "VITE_SUPABASE_URL": "",
+    "VITE_SUPABASE_ANON_KEY": "",
+    "VITE_GOOGLE_CLIENT_ID": "",
+    "VITE_GOOGLE_AUTH_PROXY": "",
+    "FULLSTACK_PROJECT_REF": "",
+    "FULLSTACK_RESTORE_API_URL": "",
+    "ADMIN_JWT_SECRET": "",
+    "VITE_PAYSTACK_PUBLIC_KEY": "",
+    "PAYSTACK_SECRET_KEY": ""
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ]
+}
