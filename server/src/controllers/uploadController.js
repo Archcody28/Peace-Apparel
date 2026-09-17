@@ -8,11 +8,11 @@ export async function uploadFile(req, res) {
     const buffer = Buffer.from(fileBase64, 'base64')
     const safeName = `${Date.now()}-${fileName.replace(/\s+/g, '-')}`
 
-    const { data, error } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
       .from('peace-apparel')
       .upload(safeName, buffer, { contentType: contentType || 'image/jpeg', upsert: true })
 
-    if (error) throw error
+    if (uploadError) throw uploadError
 
     const { data: urlData } = supabase.storage.from('peace-apparel').getPublicUrl(safeName)
     return res.json({ url: urlData.publicUrl, path: safeName })

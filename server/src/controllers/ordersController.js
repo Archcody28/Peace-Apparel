@@ -38,8 +38,8 @@ export async function updateOrder(req, res) {
 export async function deleteOrder(req, res) {
   try {
     const { id } = req.body
-    const { data, error } = await supabase.from('orders').delete().eq('id', id)
-    if (error) throw error
+        const { error: deleteError } = await supabase.from('orders').delete().eq('id', id)
+    if (deleteError) throw deleteError
     res.json({ deleted: true })
   } catch (err) {
     console.error(err)

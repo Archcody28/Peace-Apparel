@@ -40,8 +40,16 @@ function base64url(input) {
   return Buffer.from(input).toString('base64').replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_');
 }
 
+// Matches server/src/services/tokenService.js exactly:
+// HS256, payload { userId, email, role, exp (seconds) }.
+const noRole = process.argv.includes('--no-role'); // test token WITHOUT admin role
 const header = base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-const payload = base64url(JSON.stringify({ userId: crypto.randomUUID(), email: String(email).trim().toLowerCase(), exp: Date.now() + 86400000 }));
+const payload = base64url(JSON.stringify({
+  userId: crypto.randomUUID(),
+  email: String(email).trim().toLowerCase(),
+  role: noRole ? undefined : 'admin',
+  exp: Math.floor(Date.now() / 1000) + 86400000,
+}));
 const signature = crypto.createHmac('sha256', secret).update(`${header}.${payload}`).digest('base64').replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_');
 const token = `${header}.${payload}.${signature}`;
 

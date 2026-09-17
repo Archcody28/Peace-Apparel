@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import supabase from '../lib/supabase';
 import { apiFetch } from '../lib/api';
 
@@ -9,6 +9,23 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  const checkAdmin = useCallback(async (token) => {
+    if (!token) {
+      const stored = localStorage.getItem('pa_admin_token');
+      token = stored;
+    }
+    if (!token) {
+      setIsAdmin(false);
+      return;
+    }
+    try {
+      const res = await apiFetch('/api/admin-auth', { headers: { Authorization: `Bearer ${token}` } });
+      setIsAdmin(res.ok);
+    } catch {
+      setIsAdmin(false);
+    }
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -39,24 +56,7 @@ export function AuthProvider({ children }) {
     } catch {
       return undefined;
     }
-  }, []);
-
-  const checkAdmin = async (token) => {
-    if (!token) {
-      const stored = localStorage.getItem('pa_admin_token');
-      token = stored;
-    }
-    if (!token) {
-      setIsAdmin(false);
-      return;
-    }
-    try {
-      const res = await apiFetch('/api/admin-auth', { headers: { Authorization: `Bearer ${token}` } });
-      setIsAdmin(res.ok);
-    } catch {
-      setIsAdmin(false);
-    }
-  };
+  }, [checkAdmin]);
 
   return (
     <AuthContext.Provider value={{ user, session, loading, isAdmin, setIsAdmin }}>
@@ -65,4 +65,5 @@ export function AuthProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);

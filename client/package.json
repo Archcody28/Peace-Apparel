@@ -5,11 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
   },
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.1",
     "@tailwindcss/vite": "^4.2.1",
@@ -17,6 +20,7 @@
     "date-fns": "^4.4.0",
     "framer-motion": "^12.35.0",
     "lucide-react": "^0.577.0",
+    "peace-apparel": "file:..",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.1",

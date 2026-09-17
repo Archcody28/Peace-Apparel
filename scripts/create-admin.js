@@ -28,7 +28,7 @@ if (!url || !key) {
         }
       }
     }
-  } catch (e) {
+    } catch {
     // ignore
   }
 }

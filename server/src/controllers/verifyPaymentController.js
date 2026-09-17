@@ -2,16 +2,18 @@ import supabase from '../services/supabaseService.js'
 
 export async function verifyPayment(req, res) {
   try {
-    const { reference, order, demo } = req.body
+        const { reference, order } = req.body
     if (!reference || !order) return res.status(400).json({ error: 'Reference and order are required' })
 
     let paymentStatus = 'success'
     let gatewayResponse = null
     const secretKey = process.env.PAYSTACK_SECRET_KEY
 
-    if (demo || !secretKey) {
-      paymentStatus = 'success'
-      gatewayResponse = { demo: true, message: 'Simulated successful card payment' }
+    // Demo mode is a SERVER-side decision: it is active only when no Paystack
+    // secret is configured. A client can never force demo mode to mark an
+    // order as paid while real verification is available.
+    if (!secretKey) {
+      gatewayResponse = { demo: true, message: 'Simulated successful card payment (demo mode: no PAYSTACK_SECRET_KEY configured)' }
     } else {
       const paystackRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
         method: 'GET',
@@ -19,7 +21,7 @@ export async function verifyPayment(req, res) {
       })
       const paystackData = await paystackRes.json()
       gatewayResponse = paystackData
-      if (!paystackData.status || paystackData.data?.status !== 'success') return res.status(400).json({ error: 'Payment verification failed', details: paystackData })
+      if (!paystackData.status || paystackData.data?.status !== 'success') return res.status(400).json({ error: 'Payment verification failed' })
       paymentStatus = 'success'
     }
 
@@ -36,9 +38,9 @@ export async function verifyPayment(req, res) {
     })
     if (paymentError) throw paymentError
 
-    return res.json({ ok: true, order: savedOrder, demo: demo || !secretKey })
+    return res.json({ ok: true, order: savedOrder, demo: !secretKey })
   } catch (err) {
     console.error('Verify payment error:', err)
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: 'Internal server error' })
   }
 }
