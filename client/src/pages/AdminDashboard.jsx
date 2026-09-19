@@ -153,8 +153,10 @@ export default function AdminDashboard() {
       images: [form.image.value],
       featured: form.featured.checked,
     };
-    const method = editingProduct ? 'PUT' : 'POST';
-    if (editingProduct) product.id = editingProduct.id;
+    // `editingProduct` is `{}` (truthy) when adding, so discriminate on id.
+    const isUpdate = Boolean(editingProduct && editingProduct.id);
+    const method = isUpdate ? 'PUT' : 'POST';
+    if (isUpdate) product.id = editingProduct.id;
 
     await apiFetch('/api/products', {
       method,
@@ -193,8 +195,10 @@ export default function AdminDashboard() {
       service: form.service.value,
       avatar: form.avatar.value,
     };
-    const method = editingTestimonial ? 'PUT' : 'POST';
-    if (editingTestimonial) testimonial.id = editingTestimonial.id;
+    // `editingTestimonial` is `{}` (truthy) when adding, so discriminate on id.
+    const isUpdate = Boolean(editingTestimonial && editingTestimonial.id);
+    const method = isUpdate ? 'PUT' : 'POST';
+    if (isUpdate) testimonial.id = editingTestimonial.id;
     await apiFetch('/api/testimonials', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(testimonial) });
     setEditingTestimonial(null);
     fetchAll();
@@ -216,8 +220,10 @@ export default function AdminDashboard() {
       image: form.image.value,
       sort_order: Number(form.sort_order.value),
     };
-    const method = editingFeature ? 'PUT' : 'POST';
-    if (editingFeature) feature.id = editingFeature.id;
+    // `editingFeature` is `{}` (truthy) when adding, so discriminate on id.
+    const isUpdate = Boolean(editingFeature && editingFeature.id);
+    const method = isUpdate ? 'PUT' : 'POST';
+    if (isUpdate) feature.id = editingFeature.id;
     await apiFetch('/api/homepage-features', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(feature) });
     setEditingFeature(null);
     fetchAll();

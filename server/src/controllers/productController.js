@@ -70,10 +70,16 @@ export async function createProduct(req, res) {
 export async function updateProduct(req, res) {
   try {
     const { id, ...rest } = req.body;
+    // Mirrors homepageFeaturesController.updateHomepageFeature: a missing id must
+    // be a controlled 400, and an update that matches no row is a 404, not a 500.
     if (!id) return res.status(400).json({ error: 'Product id is required' });
     const updates = coerceProductInput(rest);
     const { data, error } = await supabase.from('products').update(updates).eq('id', id).select().single();
-    if (error) throw error;
+    if (error) {
+      // PGRST116: .single() found no matching row — a not-found, not a server fault.
+      if (error.code === 'PGRST116') return res.status(404).json({ error: 'Product not found' });
+      throw error;
+    }
     res.status(200).json(normalizeProduct(data));
   } catch (err) {
     console.error(err);

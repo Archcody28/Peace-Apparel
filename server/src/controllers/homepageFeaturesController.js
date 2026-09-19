@@ -29,8 +29,15 @@ export async function createHomepageFeature(req, res) {
 export async function updateHomepageFeature(req, res) {
   try {
     const { id, ...updates } = req.body
+    // Mirrors productController.updateProduct: a missing id must be a controlled
+    // 400 rather than a 22P02 uuid cast error surfacing as a 500.
+    if (!id) return res.status(400).json({ error: 'Feature id is required' })
     const { data, error } = await supabase.from('homepage_features').update(updates).eq('id', id).select().single()
-    if (error) throw error
+    if (error) {
+      // PGRST116: .single() found no matching row — a not-found, not a server fault.
+      if (error.code === 'PGRST116') return res.status(404).json({ error: 'Homepage feature not found' })
+      throw error
+    }
     res.json(data)
   } catch (err) {
     console.error('Update homepage feature error:', err)
