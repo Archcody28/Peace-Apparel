@@ -17,8 +17,6 @@ import verifyPaymentRoutes from './routes/verifyPaymentRoutes.js';
 import categoriesRoutes from './routes/categoriesRoutes.js';
 
 const app = express();
-
-const app = express();
 app.disable('x-powered-by');
 
 // Basic security headers. CSP is relaxed for the served SPA (inline Vite bundle).
