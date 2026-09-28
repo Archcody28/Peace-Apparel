@@ -100,8 +100,9 @@ export default function ProductDetails() {
               <h1 className="font-display text-4xl md:text-5xl font-bold mb-4">{product.name}</h1>
               <div className="flex items-center gap-4 mb-6">
                 <span className="text-3xl font-bold">{formatCurrency(product.price)}</span>
-                {product.oldPrice && (
-                  <span className="text-xl text-gray-400 line-through">{formatCurrency(product.oldPrice)}</span>
+                {/* DB/API column is old_price (snake_case); oldPrice is a legacy alias. */}
+                {(product.oldPrice || product.old_price) && (
+                  <span className="text-xl text-gray-400 line-through">{formatCurrency(product.oldPrice || product.old_price)}</span>
                 )}
                 {product.stock > 0 ? (
                   <span className="text-xs font-bold uppercase tracking-wider text-green-600 bg-green-50 px-3 py-1 rounded-full">In Stock</span>

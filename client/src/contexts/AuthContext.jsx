@@ -33,7 +33,11 @@ export function AuthProvider({ children }) {
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
         setUser(session?.user ?? null);
-        checkAdmin(session?.access_token);
+        // Await the admin validation before releasing `loading`: otherwise
+        // ProtectedAdmin reads isAdmin=false while the check is still in
+        // flight and redirects a valid session to /login (admin data then
+        // never loads on refresh or hard navigation to /admin).
+        await checkAdmin(session?.access_token);
       } catch {
         setSession(null);
         setUser(null);
@@ -48,8 +52,10 @@ export function AuthProvider({ children }) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        checkAdmin(session?.access_token);
-        setLoading(false);
+        // This event can fire while `init` is still awaiting its own check;
+        // release `loading` only after this validation settles as well so a
+        // race between the two paths cannot expose isAdmin=false to the router.
+        checkAdmin(session?.access_token).finally(() => setLoading(false));
       });
 
       return () => subscription?.unsubscribe?.();

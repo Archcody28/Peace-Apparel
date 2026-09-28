@@ -82,8 +82,9 @@ export default function ProductCard({ product, onQuickView }) {
           </h3>
           <div className="flex items-center justify-between">
             <span className="font-semibold">{formatCurrency(product.price)}</span>
-            {product.oldPrice && (
-              <span className="text-gray-400 text-sm line-through">{formatCurrency(product.oldPrice)}</span>
+            {/* DB/API column is old_price (snake_case); oldPrice is a legacy alias. */}
+            {(product.oldPrice || product.old_price) && (
+              <span className="text-gray-400 text-sm line-through">{formatCurrency(product.oldPrice || product.old_price)}</span>
             )}
           </div>
         </div>
