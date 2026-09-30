@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Package, ShoppingCart, MessageSquare, Users,
   Settings, Home, Menu, X, LogOut, Search, Plus, Trash2, Edit,
-  Sun, Moon, Command, DollarSign, ShoppingBag, UserCheck, Loader2
+  Sun, Moon, Command, DollarSign, ShoppingBag, UserCheck, Loader2, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { apiFetch } from '../lib/api.js';
@@ -24,6 +24,16 @@ const navItems = [
 ];
 
 const orderStatuses = ['pending', 'processing', 'completed'];
+
+// The API accepts at most a 10 MB JSON body and base64 encoding grows a file by
+// ~4/3, so larger images cannot be uploaded. Rejecting them up front gives the
+// admin a real message instead of a silent failure. (The server limit is
+// deliberately unchanged.)
+const MAX_UPLOAD_BYTES = 7 * 1024 * 1024;
+
+function formatMegabytes(bytes) {
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -47,6 +57,7 @@ export default function AdminDashboard() {
   const [editingTestimonial, setEditingTestimonial] = useState(null);
   const [editingFeature, setEditingFeature] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [actionError, setActionError] = useState('');
   const fileInputRef = useRef(null);
 
   
@@ -81,6 +92,7 @@ export default function AdminDashboard() {
       if (st && Object.keys(st).length) setSettings(st);
     } catch (err) {
       console.error(err);
+      setActionError(err && err.message ? `Could not load admin data — ${err.message}` : 'Could not load admin data.');
     } finally {
       setLoading(false);
     }
@@ -116,20 +128,38 @@ export default function AdminDashboard() {
 
   const handleUpload = async (file, setter) => {
     if (!file) return;
+    setActionError('');
+    // Fail loudly before sending: the API rejects bodies over 10 MB and base64
+    // is ~4/3 of the file size, so anything larger could never succeed.
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setActionError(
+        `Image is too large (${formatMegabytes(file.size)}). The largest upload this store accepts is about ` +
+        `${formatMegabytes(MAX_UPLOAD_BYTES)} — please choose a smaller image.`
+      );
+      return; // the image field is left untouched: no false success state
+    }
     setUploading(true);
     const reader = new FileReader();
+    reader.onerror = () => {
+      setUploading(false);
+      setActionError('Could not read the selected image file. Please try again.');
+    };
     reader.onload = async () => {
-      const base64 = reader.result.split(',')[1];
+      const base64 = typeof reader.result === 'string' ? reader.result.split(',')[1] : '';
       try {
         const res = await apiFetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ fileName: file.name, fileBase64: base64, contentType: file.type }),
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
+        if (!data || typeof data.url !== 'string' || !data.url) {
+          throw new Error('Upload failed: the server did not return an image URL.');
+        }
         setter(data.url);
       } catch (err) {
-        console.error(err);
+        // The caller's image value is deliberately not set on failure.
+        setActionError(err && err.message ? err.message : 'Image upload failed. Please try again.');
       } finally {
         setUploading(false);
       }
@@ -158,29 +188,54 @@ export default function AdminDashboard() {
     const method = isUpdate ? 'PUT' : 'POST';
     if (isUpdate) product.id = editingProduct.id;
 
-    await apiFetch('/api/products', {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(product),
-    });
+    setActionError('');
+    try {
+      await apiFetch('/api/products', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(product),
+      });
+    } catch (err) {
+      // Keep the form open with the entered values so nothing is lost.
+      setActionError(err && err.message ? err.message : 'Could not save the product.');
+      return;
+    }
     setEditingProduct(null);
     fetchAll();
   };
 
   const deleteProduct = async (id) => {
     if (!confirm('Delete this product?')) return;
-    await apiFetch('/api/products', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    setActionError('');
+    try {
+      await apiFetch('/api/products', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    } catch (err) {
+      setActionError(err && err.message ? err.message : 'Could not delete the product.');
+      return;
+    }
     fetchAll();
   };
 
   const updateOrderStatus = async (id, status) => {
-    await apiFetch('/api/orders', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }) });
+    setActionError('');
+    try {
+      await apiFetch('/api/orders', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }) });
+    } catch (err) {
+      setActionError(err && err.message ? err.message : 'Could not update the order status.');
+      return;
+    }
     fetchAll();
   };
 
   const deleteOrder = async (id) => {
     if (!confirm('Delete this order?')) return;
-    await apiFetch('/api/orders', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    setActionError('');
+    try {
+      await apiFetch('/api/orders', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    } catch (err) {
+      setActionError(err && err.message ? err.message : 'Could not delete the order.');
+      return;
+    }
     fetchAll();
   };
 
@@ -199,14 +254,26 @@ export default function AdminDashboard() {
     const isUpdate = Boolean(editingTestimonial && editingTestimonial.id);
     const method = isUpdate ? 'PUT' : 'POST';
     if (isUpdate) testimonial.id = editingTestimonial.id;
-    await apiFetch('/api/testimonials', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(testimonial) });
+    setActionError('');
+    try {
+      await apiFetch('/api/testimonials', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(testimonial) });
+    } catch (err) {
+      setActionError(err && err.message ? err.message : 'Could not save the testimonial.');
+      return; // keep the form open with the entered values
+    }
     setEditingTestimonial(null);
     fetchAll();
   };
 
   const deleteTestimonial = async (id) => {
     if (!confirm('Delete this testimonial?')) return;
-    await apiFetch('/api/testimonials', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    setActionError('');
+    try {
+      await apiFetch('/api/testimonials', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    } catch (err) {
+      setActionError(err && err.message ? err.message : 'Could not delete the testimonial.');
+      return;
+    }
     fetchAll();
   };
 
@@ -224,14 +291,26 @@ export default function AdminDashboard() {
     const isUpdate = Boolean(editingFeature && editingFeature.id);
     const method = isUpdate ? 'PUT' : 'POST';
     if (isUpdate) feature.id = editingFeature.id;
-    await apiFetch('/api/homepage-features', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(feature) });
+    setActionError('');
+    try {
+      await apiFetch('/api/homepage-features', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(feature) });
+    } catch (err) {
+      setActionError(err && err.message ? err.message : 'Could not save the homepage feature.');
+      return; // keep the form open with the entered values
+    }
     setEditingFeature(null);
     fetchAll();
   };
 
   const deleteFeature = async (id) => {
     if (!confirm('Delete this feature?')) return;
-    await apiFetch('/api/homepage-features', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    setActionError('');
+    try {
+      await apiFetch('/api/homepage-features', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    } catch (err) {
+      setActionError(err && err.message ? err.message : 'Could not delete the homepage feature.');
+      return;
+    }
     fetchAll();
   };
 
@@ -245,13 +324,26 @@ export default function AdminDashboard() {
       address: form.address.value,
       whatsapp_number: form.whatsapp_number.value,
     };
-    await apiFetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newSettings) });
+    setActionError('');
+    try {
+      await apiFetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newSettings) });
+    } catch (err) {
+      // Do not report success: the stored settings were not changed.
+      setActionError(err && err.message ? err.message : 'Could not save the store settings.');
+      return;
+    }
     setSettings(newSettings);
   };
 
   const deleteSubscriber = async (id) => {
     if (!confirm('Delete this subscriber?')) return;
-    await apiFetch('/api/subscribers', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    setActionError('');
+    try {
+      await apiFetch('/api/subscribers', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    } catch (err) {
+      setActionError(err && err.message ? err.message : 'Could not delete the subscriber.');
+      return;
+    }
     fetchAll();
   };
 
@@ -346,6 +438,24 @@ export default function AdminDashboard() {
               <Command className="w-4 h-4" /> Command Palette <span className="text-xs text-gray-400">Ctrl K</span>
             </button>
           </div>
+
+          {/* Failed admin action: shows the server's own error instead of silence. */}
+          {actionError && (
+            <div
+              role="alert"
+              className="mb-6 flex items-start gap-3 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl"
+            >
+              <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className="flex-1 text-sm text-red-600 dark:text-red-300 break-words">{actionError}</p>
+              <button
+                onClick={() => setActionError('')}
+                aria-label="Dismiss error"
+                className="text-red-500 hover:text-red-700 dark:text-red-300 dark:hover:text-red-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {loading && section === 'dashboard' ? (
             <div className="flex items-center justify-center h-64">

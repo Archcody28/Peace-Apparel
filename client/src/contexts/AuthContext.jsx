@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import supabase from '../lib/supabase';
 import { apiFetch } from '../lib/api';
 
-const AuthContext = createContext({ user: null, session: null, loading: true, isAdmin: false });
+const AuthContext = createContext({ user: null, session: null, loading: true, isAdmin: false, checkAdmin: async () => false });
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -10,6 +10,10 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Validates an admin token (defaults to the stored one) and records the result.
+  // Returns true only when the server accepted the token. apiFetch rejects on
+  // non-2xx, so an invalid/expired/rejected token lands in the catch below and
+  // never produces an authenticated state. Token values are never logged.
   const checkAdmin = useCallback(async (token) => {
     if (!token) {
       const stored = localStorage.getItem('pa_admin_token');
@@ -17,13 +21,15 @@ export function AuthProvider({ children }) {
     }
     if (!token) {
       setIsAdmin(false);
-      return;
+      return false;
     }
     try {
-      const res = await apiFetch('/api/admin-auth', { headers: { Authorization: `Bearer ${token}` } });
-      setIsAdmin(res.ok);
+      await apiFetch('/api/admin-auth', { headers: { Authorization: `Bearer ${token}` } });
+      setIsAdmin(true);
+      return true;
     } catch {
       setIsAdmin(false);
+      return false;
     }
   }, []);
 
@@ -65,7 +71,7 @@ export function AuthProvider({ children }) {
   }, [checkAdmin]);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, setIsAdmin }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, setIsAdmin, checkAdmin }}>
       {children}
     </AuthContext.Provider>
   );

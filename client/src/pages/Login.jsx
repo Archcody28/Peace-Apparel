@@ -6,7 +6,7 @@ import ScrollReveal from '../components/ScrollReveal.jsx';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { setIsAdmin } = useAuth();
+  const { setIsAdmin, checkAdmin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -23,13 +23,26 @@ export default function Login() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Login failed');
-      localStorage.setItem('pa_admin_token', data.token);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Sign in failed (HTTP ${res.status}).`);
+      // Nothing is stored unless the response actually carries a usable token.
+      if (typeof data.token !== 'string' || !data.token.trim()) {
+        throw new Error('Sign in failed: the server did not return an admin token.');
+      }
+      const token = data.token;
+      localStorage.setItem('pa_admin_token', token);
+      // Confirm the issued token is accepted server-side before treating the
+      // session as authenticated; a rejected token must not open /admin.
+      // The token value itself is never logged.
+      const verified = await checkAdmin(token);
+      if (!verified) {
+        localStorage.removeItem('pa_admin_token');
+        throw new Error('Sign in failed: the issued admin token was rejected. Please try again.');
+      }
       setIsAdmin(true);
       navigate('/admin');
     } catch (err) {
-      setError(err.message);
+      setError(err && err.message ? err.message : 'Sign in failed. Please try again.');
     } finally {
       setLoading(false);
     }
