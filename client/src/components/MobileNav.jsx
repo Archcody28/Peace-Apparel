@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingBag, Heart, Phone } from 'lucide-react';
+import { usePublicSettings, telHref } from '../hooks/usePublicSettings.js';
 
 export default function MobileNav({ isOpen, onClose, links }) {
+  const { settings } = usePublicSettings();
+  const phone = settings?.phone || '+2348012345678';
   return (
     <AnimatePresence>
       {isOpen && (
@@ -49,9 +52,9 @@ export default function MobileNav({ isOpen, onClose, links }) {
               </nav>
 
               <div className="space-y-4 pt-6 border-t border-gray-200">
-                <a href="tel:+2348012345678" className="flex items-center gap-3 text-sm">
+                <a href={telHref(phone)} className="flex items-center gap-3 text-sm">
                   <Phone className="w-4 h-4 text-gold" />
-                  <span>+234 801 234 5678</span>
+                  <span>{phone}</span>
                 </a>
                 <div className="flex gap-4">
                   <button className="flex items-center gap-2 px-4 py-3 bg-charcoal text-white rounded-xl text-sm flex-1">

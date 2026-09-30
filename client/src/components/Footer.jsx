@@ -1,9 +1,15 @@
 import { Link } from 'react-router-dom';
 import { Instagram, Facebook, Twitter, Mail, MapPin, Phone, ArrowUpRight } from 'lucide-react';
 import ScrollReveal from './ScrollReveal.jsx';
+import { usePublicSettings, telHref, mailtoHref } from '../hooks/usePublicSettings.js';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+  const { settings } = usePublicSettings();
+  const phone = settings?.phone || '+2348012345678';
+  const email = settings?.email || 'hello@peaceapparel.com';
+  const address = settings?.address || '12 Fashion Avenue, Aba, Abia State, Nigeria';
+  const storeName = settings?.store_name || 'Peace Apparel';
 
   const footerLinks = {
     shop: [
@@ -38,7 +44,7 @@ export default function Footer() {
                   <span className="font-display font-bold text-charcoal text-xl">P</span>
                 </div>
                 <div>
-                  <span className="font-display text-2xl font-bold block leading-none">Peace Apparel</span>
+                  <span className="font-display text-2xl font-bold block leading-none">{storeName}</span>
                   <span className="text-xs uppercase tracking-[0.2em] text-gold">Luxury African Fashion</span>
                 </div>
               </Link>
@@ -46,14 +52,14 @@ export default function Footer() {
                 Crafting timeless African luxury fashion with precision tailoring, vibrant Ankara designs, and bespoke bridal elegance.
               </p>
               <div className="space-y-3 text-sm text-gray-400">
-                <a href="tel:+2348012345678" className="flex items-center gap-3 hover:text-gold transition-colors">
-                  <Phone className="w-4 h-4" /> +234 801 234 5678
+                <a href={telHref(phone)} className="flex items-center gap-3 hover:text-gold transition-colors">
+                  <Phone className="w-4 h-4" /> {phone}
                 </a>
-                <a href="mailto:hello@peaceapparel.com" className="flex items-center gap-3 hover:text-gold transition-colors">
-                  <Mail className="w-4 h-4" /> hello@peaceapparel.com
+                <a href={mailtoHref(email)} className="flex items-center gap-3 hover:text-gold transition-colors">
+                  <Mail className="w-4 h-4" /> {email}
                 </a>
                 <p className="flex items-start gap-3">
-                  <MapPin className="w-4 h-4 mt-0.5" /> 12 Fashion Avenue, Aba, Abia State, Nigeria
+                  <MapPin className="w-4 h-4 mt-0.5" /> {address}
                 </p>
               </div>
             </div>
@@ -100,7 +106,7 @@ export default function Footer() {
         </ScrollReveal>
 
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-gray-500 text-sm">&copy; {currentYear} Peace Apparel. All rights reserved.</p>
+          <p className="text-gray-500 text-sm">&copy; {currentYear} {storeName}. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <a href="#" className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-gold hover:border-gold hover:text-charcoal transition-all">
               <Instagram className="w-4 h-4" />

@@ -3,10 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, Truck, Store, MapPin, MessageCircle, CreditCard } from 'lucide-react';
 import { useCart } from '../contexts/CartContext.jsx';
 import { formatCurrency, generateOrderId } from '../lib/utils.js';
+import { usePublicSettings, digitsOf } from '../hooks/usePublicSettings.js';
 import PaystackPayment from './PaystackPayment.jsx';
 
 export default function CheckoutModal({ isOpen, onClose }) {
   const { items, subtotal, clearCart } = useCart();
+  const { settings } = usePublicSettings();
+  const whatsappNumber = digitsOf(settings?.whatsapp_number || settings?.phone) || '2348012345678';
   const [step, setStep] = useState('form');
   const [deliveryMethod, setDeliveryMethod] = useState('pickup');
   const [paymentMethod, setPaymentMethod] = useState('whatsapp');
@@ -58,7 +61,7 @@ export default function CheckoutModal({ isOpen, onClose }) {
       `*Delivery:* ${formatCurrency(deliveryFees[deliveryMethod])}\n` +
       `*Total:* ${formatCurrency(total)}`
     );
-    window.open(`https://wa.me/2348012345678?text=${message}`, '_blank');
+    window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
   };
 
   const handleWhatsAppOrder = async () => {

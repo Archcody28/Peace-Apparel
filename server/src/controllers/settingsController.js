@@ -11,6 +11,32 @@ export async function getSettings(req, res) {
   }
 }
 
+/**
+ * Public storefront settings.
+ *
+ * GET /api/settings is admin-only (full row). This handler exposes ONLY the
+ * whitelisted public store-identity fields so Footer / Contact / WhatsApp
+ * links can render the real database values. Never add secrets, payment keys,
+ * credentials or internal configuration to PUBLIC_SETTINGS_FIELDS.
+ */
+const PUBLIC_SETTINGS_FIELDS = ['store_name', 'phone', 'email', 'address', 'whatsapp_number']
+
+export async function getPublicSettings(req, res) {
+  try {
+    const { data, error } = await supabase.from('settings').select(PUBLIC_SETTINGS_FIELDS.join(',')).single()
+    if (error && error.code !== 'PGRST116') throw error
+    if (!data) return res.json({})
+    const publicSettings = {}
+    for (const field of PUBLIC_SETTINGS_FIELDS) {
+      if (data[field] !== undefined) publicSettings[field] = data[field]
+    }
+    res.json(publicSettings)
+  } catch (err) {
+    console.error('Public settings error:', err)
+    res.status(500).json({ error: err.message })
+  }
+}
+
 export async function saveSettings(req, res) {
   try {
     const settings = req.body

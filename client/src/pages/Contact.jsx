@@ -1,10 +1,17 @@
 import { useState } from 'react';
 import ScrollReveal from '../components/ScrollReveal.jsx';
 import { Mail, Phone, MapPin, Clock, Send, Calendar } from 'lucide-react';
+import { usePublicSettings, digitsOf, telHref, mailtoHref } from '../hooks/usePublicSettings.js';
 
 export default function Contact() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', service: '', message: '' });
   const [status, setStatus] = useState('idle');
+  const { settings } = usePublicSettings();
+  const phone = settings?.phone || '+2348012345678';
+  const email = settings?.email || 'hello@peaceapparel.com';
+  const address = settings?.address || '12 Fashion Avenue, Aba, Abia State';
+  const storeName = settings?.store_name || 'Peace Apparel';
+  const whatsappNumber = digitsOf(settings?.whatsapp_number || settings?.phone) || '2348012345678';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,7 +25,7 @@ export default function Contact() {
         `*Service:* ${form.service}\n` +
         `*Message:* ${form.message}`
       );
-      window.open(`https://wa.me/2348012345678?text=${message}`, '_blank');
+      window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
       setStatus('success');
       setForm({ name: '', email: '', phone: '', service: '', message: '' });
     } catch {
@@ -37,9 +44,9 @@ export default function Contact() {
 
         <div className="grid lg:grid-cols-3 gap-8 mb-16">
           {[
-            { icon: Phone, title: 'Call Us', text: '+234 801 234 5678', href: 'tel:+2348012345678' },
-            { icon: Mail, title: 'Email Us', text: 'hello@peaceapparel.com', href: 'mailto:hello@peaceapparel.com' },
-            { icon: MapPin, title: 'Visit Us', text: '12 Fashion Avenue, Aba, Abia State', href: '#' },
+            { icon: Phone, title: 'Call Us', text: phone, href: telHref(phone) },
+            { icon: Mail, title: 'Email Us', text: email, href: mailtoHref(email) },
+            { icon: MapPin, title: 'Visit Us', text: address, href: '#' },
           ].map((item, i) => (
             <ScrollReveal key={item.title} delay={i * 0.1}>
               <a href={item.href} className="block bg-white rounded-3xl p-8 shadow-sm border border-gray-100 text-center hover:shadow-lg transition-shadow">
@@ -121,7 +128,7 @@ export default function Contact() {
                 <h3 className="font-display text-2xl font-bold mb-3">Book a Private Fitting</h3>
                 <p className="text-white/70 text-sm mb-6 leading-relaxed">Experience personalized service with our in-house stylists. Available Monday through Saturday, 9 AM to 6 PM.</p>
                 <a
-                  href="https://wa.me/2348012345678?text=Hello%20Peace%20Apparel,%20I%20would%20like%20to%20book%20a%20fitting%20appointment."
+                  href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Hello ${storeName}, I would like to book a fitting appointment.`)}`}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-gold text-charcoal font-bold rounded-xl hover:shadow-lg transition-all"
