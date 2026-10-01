@@ -2,23 +2,18 @@ import { Link } from 'react-router-dom';
 import { Instagram, Facebook, Twitter, Mail, MapPin, Phone, ArrowUpRight } from 'lucide-react';
 import ScrollReveal from './ScrollReveal.jsx';
 import { usePublicSettings, telHref, mailtoHref } from '../hooks/usePublicSettings.js';
+import { usePublicCategories } from '../hooks/usePublicCategories.js';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
   const { settings } = usePublicSettings();
-  const phone = settings?.phone || '+2348012345678';
-  const email = settings?.email || 'hello@peaceapparel.com';
-  const address = settings?.address || '12 Fashion Avenue, Aba, Abia State, Nigeria';
+  const { categories, loading: categoriesLoading } = usePublicCategories();
+  const phone = settings?.phone;
+  const email = settings?.email;
+  const address = settings?.address || 'Aba, Abia State, Nigeria';
   const storeName = settings?.store_name || 'Peace Apparel';
 
   const footerLinks = {
-    shop: [
-      { name: 'Ankara Collection', path: '/products?category=Ankara' },
-      { name: 'Senator Wears', path: '/products?category=Senator' },
-      { name: 'Bridal Outfits', path: '/products?category=Bridal' },
-      { name: 'Native Wears', path: '/products?category=Native' },
-      { name: 'Accessories', path: '/products?category=Accessories' },
-    ],
     services: [
       { name: 'Fashion Design', path: '/about' },
       { name: 'Custom Tailoring', path: '/about' },
@@ -32,6 +27,20 @@ export default function Footer() {
       { name: 'Admin', path: '/login' },
     ],
   };
+
+  // Live shop links (Phase 9): one link per real category from
+  // GET /api/categories. States are never faked:
+  // - loading            -> skeleton rows, no invented category names
+  // - loaded with rows   -> the live category links
+  // - failed or empty    -> a single honest "All Products" link
+  const shopLinks = categoriesLoading
+    ? null
+    : (categories && categories.length > 0)
+      ? categories.map((c) => ({
+          name: c.name,
+          path: `/products?category=${encodeURIComponent(c.name)}`,
+        }))
+      : [];
 
   return (
     <footer className="bg-charcoal text-white pt-20 pb-8">
@@ -67,13 +76,25 @@ export default function Footer() {
             <div>
               <h4 className="font-display text-lg mb-6">Shop</h4>
               <ul className="space-y-3">
-                {footerLinks.shop.map(link => (
-                  <li key={link.name}>
-                    <Link to={link.path} className="text-gray-400 text-sm hover:text-gold transition-colors flex items-center gap-1 group">
-                      {link.name} <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-1 translate-x-1 group-hover:opacity-100 group-hover:translate-y-0 group-hover:translate-x-0 transition-all" />
+                {shopLinks === null ? (
+                  [...Array(3)].map((_, i) => (
+                    <li key={i}><span className="block h-4 w-28 rounded skeleton" /></li>
+                  ))
+                ) : shopLinks.length > 0 ? (
+                  shopLinks.map(link => (
+                    <li key={link.name}>
+                      <Link to={link.path} className="text-gray-400 text-sm hover:text-gold transition-colors flex items-center gap-1 group">
+                        {link.name} <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-1 translate-x-1 group-hover:opacity-100 group-hover:translate-y-0 group-hover:translate-x-0 transition-all" />
+                      </Link>
+                    </li>
+                  ))
+                ) : (
+                  <li>
+                    <Link to="/products" className="text-gray-400 text-sm hover:text-gold transition-colors flex items-center gap-1 group">
+                      All Products <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-1 translate-x-1 group-hover:opacity-100 group-hover:translate-y-0 group-hover:translate-x-0 transition-all" />
                     </Link>
                   </li>
-                ))}
+                )}
               </ul>
             </div>
 

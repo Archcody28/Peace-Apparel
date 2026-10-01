@@ -5,12 +5,10 @@ import { Search, SlidersHorizontal, X, Grid3X3, LayoutList } from 'lucide-react'
 import ProductCard from '../components/ProductCard.jsx';
 import QuickViewModal from '../components/QuickViewModal.jsx';
 import ScrollReveal from '../components/ScrollReveal.jsx';
-
-const categories = [
-  'All', 'Ankara', 'Senator', 'Native', 'Bridal', 'Casual', 'Corporate', 'Men', 'Women', 'Accessories'
-];
+import { usePublicCategories } from '../hooks/usePublicCategories.js';
 
 export default function Products() {
+  const { categories: dbCategories, loading: categoriesLoading } = usePublicCategories();
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -76,6 +74,18 @@ export default function Products() {
     setSearchParams(params);
   };
 
+  // Chip list derived from the live categories table, with honest states:
+  // - loading              -> null -> skeleton chips, never fake names
+  // - request failed       -> ['All'] only + explicit "unavailable" note below
+  // - success with rows    -> ['All', ...real category names]
+  // - success but empty    -> ['All'] only + explicit empty note below
+  //   (a successful empty response must NEVER fall back to hard-coded chips)
+  const categoriesUnavailable = !categoriesLoading && dbCategories === null;
+  const categoryOptions = useMemo(() => {
+    if (dbCategories !== null) return ['All', ...dbCategories.map((c) => c.name)];
+    return categoriesLoading ? null : ['All'];
+  }, [dbCategories, categoriesLoading]);
+
   return (
     <main className="min-h-screen pt-24 pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -123,19 +133,31 @@ export default function Products() {
 
           <div className="flex items-center gap-2 mt-4 overflow-x-auto pb-2">
             <SlidersHorizontal className="w-4 h-4 text-gold-dark flex-shrink-0" />
-            {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setCategory(cat)}
-                className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition-all ${
-                  activeCategory === cat
-                    ? 'bg-charcoal text-white'
-                    : 'bg-white border border-gray-200 hover:border-gold'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+            {categoryOptions === null ? (
+              [...Array(4)].map((_, i) => (
+                <span key={i} className="flex-shrink-0 w-20 h-8 rounded-full skeleton" />
+              ))
+            ) : (
+              categoryOptions.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setCategory(cat)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition-all ${
+                    activeCategory === cat
+                      ? 'bg-charcoal text-white'
+                      : 'bg-white border border-gray-200 hover:border-gold'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))
+            )}
+            {categoriesUnavailable && (
+              <span className="flex-shrink-0 text-xs text-gray-400">Categories unavailable</span>
+            )}
+            {!categoriesLoading && !categoriesUnavailable && dbCategories?.length === 0 && (
+              <span className="flex-shrink-0 text-xs text-gray-400">No categories yet</span>
+            )}
           </div>
         </div>
 

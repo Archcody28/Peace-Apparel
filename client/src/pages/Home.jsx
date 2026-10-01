@@ -6,6 +6,7 @@ import ScrollReveal from '../components/ScrollReveal.jsx';
 import ProductCard from '../components/ProductCard.jsx';
 import QuickViewModal from '../components/QuickViewModal.jsx';
 import TestimonialWall from '../components/TestimonialWall.jsx';
+import { usePublicCategories } from '../hooks/usePublicCategories.js';
 
 const services = [
   { icon: Scissors, title: 'Bespoke Tailoring', desc: 'Precision-cut garments tailored to your exact measurements and style.' },
@@ -47,6 +48,15 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [quickView, setQuickView] = useState(null);
   const [openFaq, setOpenFaq] = useState(0);
+
+  const { categories: dbCategories } = usePublicCategories();
+  // Category deep links are conditional on the live categories table (Phase 9):
+  // the link only carries a ?category= filter when that category really exists,
+  // otherwise it falls back to the full catalog — never a dead filter.
+  const hasCategory = (name) =>
+    Array.isArray(dbCategories) && dbCategories.some(c => c.name === name);
+  const productsPath = (name) =>
+    hasCategory(name) ? `/products?category=${encodeURIComponent(name)}` : '/products';
 
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({
@@ -185,7 +195,7 @@ export default function Home() {
               <p className="text-gold-dark uppercase tracking-[0.2em] text-xs mb-3">Editor&apos;s Pick</p>
               <h2 className="font-display text-4xl md:text-5xl font-bold">Featured Ankara Styles</h2>
             </div>
-            <Link to="/products?category=Ankara" className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 hover:text-gold-dark transition-colors">
+            <Link to={productsPath('Ankara')} className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 hover:text-gold-dark transition-colors">
               View All <ArrowRight className="w-4 h-4" />
             </Link>
           </ScrollReveal>
@@ -240,10 +250,10 @@ export default function Home() {
             <h2 className="font-display text-5xl md:text-7xl font-bold mb-6">Bridal & Occasion</h2>
             <p className="text-white/80 max-w-2xl mx-auto mb-10">Elegant bridal asoebi, exquisite lace gowns, and statement occasion wear designed to make you unforgettable.</p>
             <Link
-              to="/products?category=Bridal"
+              to={productsPath('Bridal')}
               className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-gold text-charcoal font-bold uppercase tracking-wider text-sm rounded-full hover:shadow-xl transition-all"
             >
-              Explore Bridal <ArrowRight className="w-4 h-4" />
+              {hasCategory('Bridal') ? 'Explore Bridal' : 'Explore Collection'} <ArrowRight className="w-4 h-4" />
             </Link>
           </ScrollReveal>
         </div>

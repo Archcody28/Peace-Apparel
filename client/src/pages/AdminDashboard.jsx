@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Package, ShoppingCart, MessageSquare, Users,
   Settings, Home, Menu, X, LogOut, Search, Plus, Trash2, Edit,
-  Sun, Moon, Command, DollarSign, ShoppingBag, UserCheck, Loader2, AlertTriangle
+  Sun, Moon, Command, DollarSign, ShoppingBag, UserCheck, Loader2, AlertTriangle,
+  Tag
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { apiFetch } from '../lib/api.js';
@@ -12,10 +13,12 @@ import { formatCurrency } from '../lib/utils.js';
 import CommandPalette from '../components/CommandPalette.jsx';
 import SimpleLineChart from '../components/SimpleLineChart.jsx';
 import SimpleDoughnutChart from '../components/SimpleDoughnutChart.jsx';
+import { resetPublicCategoriesCache } from '../hooks/usePublicCategories.js';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'products', label: 'Products', icon: Package },
+  { id: 'categories', label: 'Categories', icon: Tag },
   { id: 'orders', label: 'Orders', icon: ShoppingCart },
   { id: 'testimonials', label: 'Testimonials', icon: MessageSquare },
   { id: 'homepage', label: 'Homepage Products', icon: Home },
@@ -43,6 +46,9 @@ export default function AdminDashboard() {
   const [darkMode, setDarkMode] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [products, setProducts] = useState([]);
+  // Live categories from GET /api/categories: admin filter chips, the product
+  // form select and the Categories section all read this single source.
+  const [categories, setCategories] = useState([]);
   const [orders, setOrders] = useState([]);
   const [subscribers, setSubscribers] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
@@ -56,6 +62,7 @@ export default function AdminDashboard() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [editingTestimonial, setEditingTestimonial] = useState(null);
   const [editingFeature, setEditingFeature] = useState(null);
+  const [editingCategory, setEditingCategory] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [actionError, setActionError] = useState('');
   const fileInputRef = useRef(null);
@@ -74,7 +81,7 @@ export default function AdminDashboard() {
 
       const fetchAll = useCallback(async () => {
     try {
-      const [p, o, s, t, h, a, st] = await Promise.all([
+      const [p, o, s, t, h, a, st, c] = await Promise.all([
         apiFetch('/api/products?limit=200').then(r => r.json()),
         apiFetch('/api/orders').then(r => r.json()),
         apiFetch('/api/subscribers').then(r => r.json()),
@@ -82,6 +89,7 @@ export default function AdminDashboard() {
         apiFetch('/api/homepage-features').then(r => r.json()),
         apiFetch('/api/analytics').then(r => r.json()),
         apiFetch('/api/settings').then(r => r.json().catch(() => ({}))),
+        apiFetch('/api/categories').then(r => r.json()),
       ]);
       setProducts(p);
       setOrders(o);
@@ -90,6 +98,7 @@ export default function AdminDashboard() {
       setHomeFeatures(h);
       setAnalytics(a);
       if (st && Object.keys(st).length) setSettings(st);
+      setCategories(Array.isArray(c) ? c : []);
     } catch (err) {
       console.error(err);
       setActionError(err && err.message ? `Could not load admin data — ${err.message}` : 'Could not load admin data.');
@@ -110,13 +119,21 @@ export default function AdminDashboard() {
     navigate('/login');
   };
 
+  // A filter naming a category that no longer exists can never match a
+  // product; fall back to 'All' so chips and table stay consistent after a
+  // category is deleted (instead of silently showing an empty table).
+  const activeCategoryFilter = useMemo(() => {
+    if (productCategoryFilter === 'All') return 'All';
+    return categories.some(c => c.name === productCategoryFilter) ? productCategoryFilter : 'All';
+  }, [productCategoryFilter, categories]);
+
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
       const matchesSearch = !search || p.name?.toLowerCase().includes(search.toLowerCase());
-      const matchesCategory = productCategoryFilter === 'All' || p.categories?.includes(productCategoryFilter);
+      const matchesCategory = activeCategoryFilter === 'All' || p.categories?.includes(activeCategoryFilter);
       return matchesSearch && matchesCategory;
     });
-  }, [products, search, productCategoryFilter]);
+  }, [products, search, activeCategoryFilter]);
 
   const filteredOrders = useMemo(() => {
     return orders.filter(o => {
@@ -201,6 +218,43 @@ export default function AdminDashboard() {
       return;
     }
     setEditingProduct(null);
+    fetchAll();
+  };
+
+  const saveCategory = async (e) => {
+    e.preventDefault();
+    const name = (e.target.name.value || '').trim();
+    if (!name) return; // the form field is `required`; belt and braces
+    // `editingCategory` is `{}` (truthy) when adding, so discriminate on id.
+    const isUpdate = Boolean(editingCategory && editingCategory.id);
+    setActionError('');
+    try {
+      await apiFetch('/api/categories', {
+        method: isUpdate ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(isUpdate ? { id: editingCategory.id, name } : { name }),
+      });
+    } catch (err) {
+      // apiFetch surfaces the server's own message (409 duplicate, 404, 500...).
+      setActionError(err && err.message ? err.message : 'Could not save the category.');
+      return;
+    }
+    setEditingCategory(null);
+    // Public pages cache the category list; drop it so they refetch on next mount.
+    resetPublicCategoriesCache();
+    fetchAll();
+  };
+
+  const deleteCategory = async (id) => {
+    if (!confirm('Delete this category? Products keep their stored category values.')) return;
+    setActionError('');
+    try {
+      await apiFetch('/api/categories', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    } catch (err) {
+      setActionError(err && err.message ? err.message : 'Could not delete the category.');
+      return;
+    }
+    resetPublicCategoriesCache();
     fetchAll();
   };
 
@@ -551,12 +605,14 @@ export default function AdminDashboard() {
               </div>
 
               <div className="flex gap-2 overflow-x-auto pb-2">
-                {['All', 'Ankara', 'Senator', 'Native', 'Bridal', 'Casual', 'Corporate', 'Men', 'Women', 'Accessories'].map(cat => (
+                {loading ? (
+                  [...Array(4)].map((_, i) => <span key={i} className="flex-shrink-0 w-20 h-8 rounded-full skeleton" />)
+                ) : ['All', ...categories.map(cat => cat.name)].map(cat => (
                   <button
                     key={cat}
                     onClick={() => setProductCategoryFilter(cat)}
                     className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-all ${
-                      productCategoryFilter === cat
+                      activeCategoryFilter === cat
                         ? `${darkMode ? 'bg-gold text-charcoal' : 'bg-charcoal text-white'} shadow-sm`
                         : `${darkMode ? 'bg-white/5 text-gray-300 border-white/10 hover:text-gold' : 'bg-white text-gray-600 border-gray-200 hover:border-gold hover:text-gold-dark'}`
                     }`}
@@ -605,6 +661,7 @@ export default function AdminDashboard() {
                 {editingProduct && (
                   <ProductFormModal
                     product={editingProduct}
+                    categories={categories}
                     onClose={() => setEditingProduct(null)}
                     onSubmit={saveProduct}
                     uploading={uploading}
@@ -613,6 +670,72 @@ export default function AdminDashboard() {
                   />
                 )}
               </AnimatePresence>
+            </div>
+          )}
+
+          {section === 'categories' && (
+            <div className="space-y-6">
+              {loading ? (
+                <div className="flex items-center justify-center h-64">
+                  <Loader2 className="w-8 h-8 animate-spin text-gold" />
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setEditingCategory({})}
+                    className="px-5 py-2.5 bg-charcoal text-white rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-gold hover:text-charcoal transition-colors"
+                  >
+                    <Plus className="w-4 h-4" /> Add Category
+                  </button>
+
+                  {categories.length === 0 ? (
+                    <div className="bg-white dark:bg-white/5 rounded-2xl p-10 text-center shadow-sm border border-gray-100 dark:border-white/10">
+                      <Tag className="w-8 h-8 text-gold-dark mx-auto mb-3" />
+                      <p className="font-display text-lg font-bold mb-2">No categories yet</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+                        Categories drive the public filter chips, the footer shop links and this product
+                        filter. Add one to start organizing the catalog.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-white dark:bg-white/5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/10 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-gray-100 dark:border-white/10 text-left bg-gray-50 dark:bg-white/5">
+                              <th className="p-4 font-medium">Name</th>
+                              <th className="p-4 font-medium">Products</th>
+                              <th className="p-4 font-medium">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {categories.map(cat => (
+                              <tr key={cat.id} className="border-b border-gray-50 dark:border-white/5">
+                                <td className="p-4 font-medium">{cat.name}</td>
+                                <td className="p-4 text-gray-500 dark:text-gray-400">
+                                  {products.filter(p => p.categories?.includes(cat.name)).length} product(s)
+                                </td>
+                                <td className="p-4">
+                                  <div className="flex gap-2">
+                                    <button onClick={() => setEditingCategory(cat)} className="p-2 hover:bg-gold/20 rounded-lg" aria-label={`Edit ${cat.name}`}><Edit className="w-4 h-4" /></button>
+                                    <button onClick={() => deleteCategory(cat.id)} className="p-2 hover:bg-red-100 text-red-500 rounded-lg" aria-label={`Delete ${cat.name}`}><Trash2 className="w-4 h-4" /></button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  <AnimatePresence>
+                    {editingCategory && (
+                      <CategoryFormModal category={editingCategory} onClose={() => setEditingCategory(null)} onSubmit={saveCategory} />
+                    )}
+                  </AnimatePresence>
+                </>
+              )}
             </div>
           )}
 
@@ -834,9 +957,15 @@ function StatusBadge({ status }) {
   );
 }
 
-function ProductFormModal({ product, onClose, onSubmit, uploading, onUpload, fileInputRef }) {
+function ProductFormModal({ product, categories = [], onClose, onSubmit, uploading, onUpload, fileInputRef }) {
   const [imageUrl, setImageUrl] = useState(product.images?.[0] || product.image || '');
   const isNew = !product.id;
+  // Options come from the live categories table (Phase 9) — never a hard-coded
+  // list. A stored value that is no longer in the table stays selectable so
+  // saving never silently rewrites the product's category.
+  const storedCategory = product.category || product.categories?.[0] || '';
+  const categoryOptions = categories.map(c => c.name);
+  if (storedCategory && !categoryOptions.includes(storedCategory)) categoryOptions.push(storedCategory);
 
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
@@ -851,8 +980,12 @@ function ProductFormModal({ product, onClose, onSubmit, uploading, onUpload, fil
         <form onSubmit={onSubmit} className="space-y-5">
           <div className="grid md:grid-cols-2 gap-5">
             <input name="name" defaultValue={product.name} placeholder="Product Name" required className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-cream dark:bg-white/5" />
-            <select name="category" defaultValue={product.category || product.categories?.[0] || 'Ankara'} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-cream dark:bg-white/5">
-              {['Ankara', 'Senator', 'Native', 'Bridal', 'Casual', 'Corporate', 'Men', 'Women', 'Accessories'].map(c => <option key={c} value={c}>{c}</option>)}
+            <select name="category" defaultValue={storedCategory} className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-cream dark:bg-white/5">
+              {categoryOptions.length === 0 ? (
+                <option value="">No categories yet — add one first</option>
+              ) : (
+                categoryOptions.map(c => <option key={c} value={c}>{c}</option>)
+              )}
             </select>
           </div>
           <div className="grid md:grid-cols-3 gap-5">
@@ -935,6 +1068,28 @@ function FeatureFormModal({ feature, onClose, onSubmit }) {
           <input name="subtitle" defaultValue={feature.subtitle} placeholder="Subtitle" className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-cream dark:bg-white/5" />
           <input name="image" defaultValue={feature.image} placeholder="Image URL" required className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-cream dark:bg-white/5" />
           <input name="sort_order" type="number" defaultValue={feature.sort_order || 0} placeholder="Sort Order" className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-cream dark:bg-white/5" />
+          <div className="flex gap-3 pt-4">
+            <button type="button" onClick={onClose} className="flex-1 py-3 border border-gray-200 dark:border-white/10 rounded-xl font-semibold">Cancel</button>
+            <button type="submit" className="flex-1 py-3 bg-charcoal text-white rounded-xl font-semibold hover:bg-gold hover:text-charcoal transition-colors">Save</button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+}
+
+function CategoryFormModal({ category, onClose, onSubmit }) {
+  const isNew = !category.id;
+  return (
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white dark:bg-charcoal rounded-3xl shadow-2xl w-full max-w-md p-8">
+        <h2 className="font-display text-2xl font-bold mb-6">{isNew ? 'Add Category' : 'Edit Category'}</h2>
+        <form onSubmit={onSubmit} className="space-y-5">
+          <input name="name" defaultValue={category.name} placeholder="Category name (e.g. Ankara)" required autoFocus className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-cream dark:bg-white/5" />
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Category names are shown on the public Products page and the footer shop links.
+          </p>
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 py-3 border border-gray-200 dark:border-white/10 rounded-xl font-semibold">Cancel</button>
             <button type="submit" className="flex-1 py-3 bg-charcoal text-white rounded-xl font-semibold hover:bg-gold hover:text-charcoal transition-colors">Save</button>

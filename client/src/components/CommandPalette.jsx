@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, LayoutDashboard, Package, ShoppingCart, MessageSquare, Users, Settings, Home } from 'lucide-react';
+import { Search, LayoutDashboard, Package, ShoppingCart, MessageSquare, Users, Settings, Home, Tag } from 'lucide-react';
 
 export default function CommandPalette({ isOpen, onClose, onNavigate }) {
   const [query, setQuery] = useState('');
@@ -8,6 +8,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
   const commands = [
     { name: 'Dashboard', icon: LayoutDashboard, section: 'dashboard' },
     { name: 'Products', icon: Package, section: 'products' },
+    { name: 'Categories', icon: Tag, section: 'categories' },
     { name: 'Orders', icon: ShoppingCart, section: 'orders' },
     { name: 'Testimonials', icon: MessageSquare, section: 'testimonials' },
     { name: 'Homepage Products', icon: Home, section: 'homepage' },
