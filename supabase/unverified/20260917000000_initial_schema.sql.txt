@@ -1,7 +1,9 @@
 -- Peace-Apparel baseline schema (verified from server/src/controllers + client usage).
 -- Tables: products, orders, order_payments, subscribers, testimonials,
 -- homepage_features, categories, settings. Storage bucket: peace-apparel.
--- Review RLS against Supabase dashboard; service-role bypasses RLS by design.
+-- SUPERSEDED: the current server uses no privileged/service credential. Review
+-- RLS against the Supabase dashboard; see
+-- supabase/migrations/20261002180000_admin_membership_and_rls_policies.sql.
 
 create table if not exists public.products (
   id uuid primary key default gen_random_uuid(),

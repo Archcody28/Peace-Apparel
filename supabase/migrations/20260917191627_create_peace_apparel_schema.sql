@@ -2,6 +2,13 @@
 -- Generated 2026-09-17 from the Phase 4 / Step 5 application audit.
 -- Supersedes supabase/unverified/20260917000000_initial_schema.sql.txt (quarantined draft).
 --
+-- HISTORICAL / SUPERSEDED: the "service-role bypass" access model described in
+-- the comments below (sections 4-5) was replaced by
+-- supabase/migrations/20261002180000_admin_membership_and_rls_policies.sql.
+-- The application no longer holds or uses any privileged/service credential;
+-- the mentions below are comments only, and RLS stays enabled everywhere.
+-- Kept for history; do not follow the old service-role notes.
+--
 -- Corrections vs draft (evidence in Step 5 report):
 --   orders.id is TEXT (client generates ids like 'PA-MCLRQ4K1-A2B3'), not uuid.
 --   orders uses delivery_method / delivery_address / delivery_fee (not customer_address/shipping).

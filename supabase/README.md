@@ -36,9 +36,14 @@ Do not rename it into `migrations/` or apply it to any database as a baseline.
 | settings | settingsController reads/writes | No verified relationship |
 
 For ALL tables above: RLS enabled, SELECT/INSERT/UPDATE/DELETE policies and anon
-access are UNKNOWN. Service-role access is the intended Express path; absence
-of browser table calls does not establish that direct anon access is denied.
-Supabase Auth is also used; the application does not query auth tables directly.
+access are UNKNOWN in the live database. The Express server holds NO privileged
+credential: it runs on the public anon key and executes every admin read/write
+under the signed-in admin's own Supabase identity so RLS authorizes it. The
+intended policy design is
+supabase/migrations/20261002180000_admin_membership_and_rls_policies.sql;
+absence of browser table calls does not establish that direct anon access is
+denied. Supabase Auth is also used; the application does not query auth tables
+directly.
 
 ## Contracts and storage
 
@@ -49,8 +54,9 @@ Do not infer text[] from that normalization or change production data to match i
 Payment verification inserts orders then order_payments separately, referencing
 savedOrder.id. The database constraints and transaction guarantees are unverified.
 
-Uploads use Express POST /api/upload, service-role storage, bucket peace-apparel,
-a timestamp-prefixed filename, upsert=true and getPublicUrl. Bucket existence,
+Uploads use Express POST /api/upload carrying the admin's authenticated Supabase
+session (no privileged key) against the peace-apparel bucket, a
+timestamp-prefixed filename, upsert=true and getPublicUrl. Bucket existence,
 public/private visibility and storage policies remain UNKNOWN. Browser Supabase
 is retained for AuthContext session subscriptions; no client table/storage calls
 were found.

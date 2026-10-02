@@ -19,7 +19,8 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import crypto from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const MIGRATION = fileURLToPath(new URL('../supabase/migrations/20261002180000_admin_membership_and_rls_policies.sql', import.meta.url));
@@ -150,6 +151,26 @@ for (const forbidden of FORBIDDEN) {
   assert.ok(!sqlLower.includes(forbidden), 'migration must not reference a privileged credential');
 }
 pass('static: migration contains no privileged-credential reference');
+
+// S8: no runtime source file references a privileged credential. Scans the
+// browser and server runtime trees directly (never build output) so a
+// reintroduced privileged-credential integration fails CI immediately.
+const RUNTIME_DIRS = ['server/src', 'client/src'].map((p) =>
+  fileURLToPath(new URL(`../${p}`, import.meta.url)),
+);
+const RUNTIME_EXT = new Set(['.js', '.jsx', '.ts', '.tsx']);
+let scannedRuntimeFiles = 0;
+for (const dir of RUNTIME_DIRS) {
+  for (const entry of readdirSync(dir, { recursive: true })) {
+    if (!RUNTIME_EXT.has(path.extname(entry))) continue;
+    const content = readFileSync(path.join(dir, entry), 'utf8').toLowerCase();
+    for (const forbidden of FORBIDDEN) {
+      assert.ok(!content.includes(forbidden), `${entry} must not reference a privileged credential`);
+    }
+    scannedRuntimeFiles += 1;
+  }
+}
+pass(`static: scanned ${scannedRuntimeFiles} runtime source files; zero privileged-credential references`);
 
 // ---------------------------------------------------------------------------
 // Part 2 — behavioral identity assertions against an isolated mock upstream
