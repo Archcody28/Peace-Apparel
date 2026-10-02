@@ -1,3 +1,8 @@
+HISTORICAL NOTE: this file describes an earlier (pre-Express) layout and is kept
+for reference only. It is NOT the current tree: the legacy Vercel `api/` functions
+and `src/` client were replaced by `client/` (Vite) + `server/` (Express). There is
+no register-admin endpoint and no create-admin script; see README.md.
+
 Project folder structure for peace-apparel
 
 Dockerfile

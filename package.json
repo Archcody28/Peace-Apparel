@@ -14,7 +14,8 @@
         "typecheck": "npm --prefix client run typecheck && npm --prefix server run typecheck",
         "preview": "npm --prefix client run preview",
         "start": "node ./server/dist/start.js",
-        "ci": "npm run lint && npm run typecheck && npm run build"
+        "test": "node scripts/security-check-local.mjs && node scripts/rls-identity-check.mjs && node scripts/public-settings-check.mjs && node scripts/public-categories-check.mjs && node scripts/serving-check.mjs",
+        "ci": "npm run lint && npm run typecheck && npm run build && npm run test"
     },
     "engines": {
         "node": ">=22.12.0"

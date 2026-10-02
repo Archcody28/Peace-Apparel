@@ -55,4 +55,6 @@ const token = `${header}.${payload}.${signature}`;
 
 console.log('Generated admin token (paste into browser localStorage key `pa_admin_token`):\n');
 console.log(token);
-console.log('\nThen refresh the app and go to /admin');
+console.log('\nNOTE: this token only exercises the API auth boundary (/api/admin-auth).');
+console.log('Database-backed admin routes also require an active Supabase session');
+console.log('created by signing in at /login — a minted token alone gets 401.');

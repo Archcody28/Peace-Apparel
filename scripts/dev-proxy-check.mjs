@@ -44,7 +44,7 @@ try {
     // Placeholder-only credentials: server refuses to boot without them, but
     // these values never touch a real Supabase project.
     SUPABASE_URL: 'https://placeholder.supabase.co',
-    SUPABASE_SERVICE_ROLE_KEY: 'placeholder-not-a-real-key',
+    SUPABASE_ANON_KEY: 'placeholder-not-a-real-key',
     ADMIN_JWT_SECRET: 'placeholder-not-a-real-secret',
     // Isolate from inherited PORT/CORS surprises.
     CORS_ORIGIN: '',

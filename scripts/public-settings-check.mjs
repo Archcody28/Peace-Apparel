@@ -6,7 +6,7 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 
 process.env.SUPABASE_URL = 'http://127.0.0.1:0';
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'isolated-test-placeholder';
+process.env.SUPABASE_ANON_KEY = 'isolated-test-anon-key';
 process.env.ADMIN_JWT_SECRET = crypto.randomBytes(32).toString('hex');
 process.env.PAYSTACK_SECRET_KEY = '';
 

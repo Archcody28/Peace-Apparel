@@ -6,7 +6,7 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 
 process.env.SUPABASE_URL = 'http://127.0.0.1:0';
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'isolated-test-placeholder';
+process.env.SUPABASE_ANON_KEY = 'isolated-test-anon-key';
 process.env.ADMIN_JWT_SECRET = crypto.randomBytes(32).toString('hex');
 process.env.PAYSTACK_SECRET_KEY = '';
 
@@ -38,6 +38,8 @@ const upstream = http.createServer((req, res) => {
       select: url.searchParams.get('select'),
       order: url.searchParams.get('order'),
       idFilter: url.searchParams.get('id'),
+      authorization: req.headers.authorization || null,
+      apikey: req.headers.apikey || null,
     });
     if (mode === 'fail') return json(res, 500, { message: 'upstream down' });
 
@@ -95,7 +97,18 @@ try {
   });
   const base = `http://127.0.0.1:${server.address().port}`;
   const { signAdminToken } = await import('../server/dist/services/tokenService.js');
-  const token = signAdminToken({ userId: crypto.randomUUID(), email: 'fixture@example.test', role: 'admin' });
+  const { storeAdminSession } = await import('../server/dist/services/adminSessionStore.js');
+  // Seed an authenticated Supabase session exactly the way loginAdmin does:
+  // admin mutations must execute under the admin's OWN Supabase identity so
+  // RLS (public.is_admin()) authorizes them — there is no privileged key.
+  const adminUserId = crypto.randomUUID();
+  const FIXTURE_ACCESS_TOKEN = 'fixture-admin-access-token';
+  storeAdminSession(adminUserId, {
+    access_token: FIXTURE_ACCESS_TOKEN,
+    refresh_token: 'fixture-refresh-token',
+    expires_at: Math.floor(Date.now() / 1000) + 3600,
+  });
+  const token = signAdminToken({ userId: adminUserId, email: 'fixture@example.test', role: 'admin' });
   const auth = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
   const send = (method, payload, headers) =>
     fetch(`${base}/api/categories`, {
@@ -176,6 +189,9 @@ try {
   assert.equal(body.name, 'Senator', 'create must echo the stored name');
   calls = upstreamSeen.slice(before);
   assert.equal(calls[0].select, PUBLIC_FIELDS.join(','), 'create must select back only the whitelist');
+  assert.equal(calls[0].authorization, `Bearer ${FIXTURE_ACCESS_TOKEN}`,
+    'admin create must execute as the admin Supabase identity, never a privileged key');
+  assert.equal(calls[0].apikey, 'isolated-test-anon-key', 'every request must identify with the anon key');
   pass('admin create stores { name } and returns only id+name');
 
   // 7. Duplicate name => controlled 409 (not 500).

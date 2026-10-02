@@ -1,12 +1,10 @@
-import supabase from '../services/supabaseService.js'
-
 export async function getAnalytics(req, res) {
   try {
     const [products, orders, subscribers, testimonials] = await Promise.all([
-      supabase.from('products').select('id,price,stock', { count: 'exact', head: true }),
-      supabase.from('orders').select('*'),
-      supabase.from('subscribers').select('id', { count: 'exact', head: true }),
-      supabase.from('testimonials').select('id', { count: 'exact', head: true }),
+      req.supabase.from('products').select('id,price,stock', { count: 'exact', head: true }),
+      req.supabase.from('orders').select('*'),
+      req.supabase.from('subscribers').select('id', { count: 'exact', head: true }),
+      req.supabase.from('testimonials').select('id', { count: 'exact', head: true }),
     ])
 
     const totalRevenue = (orders.data || []).reduce((sum, o) => sum + (o.total || 0), 0)

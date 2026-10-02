@@ -2,7 +2,7 @@ import supabase from '../services/supabaseService.js'
 
 export async function getSubscribers(req, res) {
   try {
-    const { data, error } = await supabase.from('subscribers').select('*').order('created_at', { ascending: false })
+    const { data, error } = await req.supabase.from('subscribers').select('*').order('created_at', { ascending: false })
     if (error) throw error
     res.json(data || [])
   } catch (err) {
@@ -33,7 +33,7 @@ export async function createSubscriber(req, res) {
 export async function deleteSubscriber(req, res) {
   try {
     const { id } = req.body
-    const { error } = await supabase.from('subscribers').delete().eq('id', id)
+    const { error } = await req.supabase.from('subscribers').delete().eq('id', id)
     if (error) throw error
     res.json({ ok: true })
   } catch (err) {

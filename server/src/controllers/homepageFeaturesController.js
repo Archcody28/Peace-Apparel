@@ -17,7 +17,7 @@ export async function getHomepageFeatures(req, res) {
 export async function createHomepageFeature(req, res) {
   try {
     const feature = req.body
-    const { data, error } = await supabase.from('homepage_features').insert(feature).select().single()
+    const { data, error } = await req.supabase.from('homepage_features').insert(feature).select().single()
     if (error) throw error
     res.status(201).json(data)
   } catch (err) {
@@ -32,7 +32,7 @@ export async function updateHomepageFeature(req, res) {
     // Mirrors productController.updateProduct: a missing id must be a controlled
     // 400 rather than a 22P02 uuid cast error surfacing as a 500.
     if (!id) return res.status(400).json({ error: 'Feature id is required' })
-    const { data, error } = await supabase.from('homepage_features').update(updates).eq('id', id).select().single()
+    const { data, error } = await req.supabase.from('homepage_features').update(updates).eq('id', id).select().single()
     if (error) {
       // PGRST116: .single() found no matching row — a not-found, not a server fault.
       if (error.code === 'PGRST116') return res.status(404).json({ error: 'Homepage feature not found' })
@@ -48,7 +48,7 @@ export async function updateHomepageFeature(req, res) {
 export async function deleteHomepageFeature(req, res) {
   try {
     const { id } = req.body
-    const { error } = await supabase.from('homepage_features').delete().eq('id', id)
+    const { error } = await req.supabase.from('homepage_features').delete().eq('id', id)
     if (error) throw error
     res.json({ ok: true })
   } catch (err) {

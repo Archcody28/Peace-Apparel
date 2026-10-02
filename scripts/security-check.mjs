@@ -98,7 +98,10 @@ for (const p of ['/api/orders', '/api/subscribers', '/api/analytics', '/api/sett
   await check(`admin GET ${p} expired token`, p, { token: expiredToken, expect: 401 });
   await check(`admin GET ${p} roleless token`, p, { token: noRoleToken, expect: 403 });
 }
-await check('admin GET orders valid token', '/api/orders', { token: adminToken, expect: 500 }); // 500 = reached controller; placeholder Supabase upstream
+// Valid HS256 admin JWT with NO stored Supabase session must not reach the
+// database: without a login-established session there is no Supabase identity
+// to execute as, and there is no privileged fallback.
+await check('admin GET orders token without session', '/api/orders', { token: adminToken, expect: 401 });
 
 // Admin writes.
 const mutations = [
@@ -124,18 +127,20 @@ await check('verify token no token', '/api/admin-auth', { expect: 401 });
 await check('verify token bad token', '/api/admin-auth', { token: badToken, expect: 401 });
 await check('verify token admin token', '/api/admin-auth', { token: adminToken, expect: 200 });
 
-// Registration gate (server booted with ADMIN_REGISTRATION_SECRET=testregsecret).
-const REG_SECRET = process.env.ADMIN_REGISTRATION_SECRET || 'testregsecret';
-await check('register-admin no secret', '/api/register-admin', { method: 'POST', expect: 401 });
-await check('register-admin wrong secret', '/api/register-admin', {
+// Privileged admin provisioning was REMOVED with the service-role key:
+// POST /api/register-admin no longer exists (404 from the API not-found
+// handler). Admins are provisioned via Supabase dashboard/SQL — see
+// README_DEPLOY.md "Admin bootstrap".
+await check('register-admin endpoint removed (no secret)', '/api/register-admin', { method: 'POST', expect: 404 });
+await check('register-admin endpoint removed (wrong secret)', '/api/register-admin', {
   method: 'POST',
   headers: { 'x-admin-registration-secret': 'wrong-value' },
-  expect: 401,
+  expect: 404,
 });
-await check('register-admin role field ignored', '/api/register-admin', {
+await check('register-admin endpoint removed (any secret)', '/api/register-admin', {
   method: 'POST',
-  headers: { 'x-admin-registration-secret': REG_SECRET },
-  expect: 400, // gate passed -> controller validation runs (no email in body); no token minted
+  headers: { 'x-admin-registration-secret': process.env.ADMIN_REGISTRATION_SECRET || 'testregsecret' },
+  expect: 404,
 });
 
 console.log(failures === 0 ? '\nALL CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`);

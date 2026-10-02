@@ -14,7 +14,7 @@ export async function getTestimonials(req, res) {
 export async function createTestimonial(req, res) {
   try {
     const testimonial = req.body
-    const { data, error } = await supabase.from('testimonials').insert(testimonial).select().single()
+    const { data, error } = await req.supabase.from('testimonials').insert(testimonial).select().single()
     if (error) throw error
     res.status(201).json(data)
   } catch (err) {
@@ -26,7 +26,7 @@ export async function createTestimonial(req, res) {
 export async function updateTestimonial(req, res) {
   try {
     const { id, ...updates } = req.body
-    const { data, error } = await supabase.from('testimonials').update(updates).eq('id', id).select().single()
+    const { data, error } = await req.supabase.from('testimonials').update(updates).eq('id', id).select().single()
     if (error) throw error
     res.json(data)
   } catch (err) {
@@ -38,7 +38,7 @@ export async function updateTestimonial(req, res) {
 export async function deleteTestimonial(req, res) {
   try {
     const { id } = req.body
-    const { error } = await supabase.from('testimonials').delete().eq('id', id)
+    const { error } = await req.supabase.from('testimonials').delete().eq('id', id)
     if (error) throw error
     res.json({ ok: true })
   } catch (err) {

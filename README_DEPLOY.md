@@ -35,9 +35,11 @@ npm run dev
 
 Copy client/.env.example and server/.env.example to their corresponding .env
 files. Empty client VITE_API_URL uses Vite :5173 /api proxy -> Express :3001.
-Server requires SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and ADMIN_JWT_SECRET.
-VITE_* variables are public build inputs, never server secrets.
-ADMIN_REGISTRATION_SECRET gates provisioning; PAYSTACK_SECRET_KEY is server-only.
+Server requires SUPABASE_URL, SUPABASE_ANON_KEY and ADMIN_JWT_SECRET. The anon key
+is the public/publishable key and powerless against RLS: the server holds no
+service-role credential and authorizes admin writes through the signed-in admin's
+Supabase session. VITE_* variables are public build inputs, never server secrets.
+PAYSTACK_SECRET_KEY is server-only.
 VITE_PAYSTACK_PUBLIC_KEY is public. Existing no-secret payment demo behavior must
 not be treated as verified production payment processing.
 
@@ -97,24 +99,24 @@ change the already-built Vite bundle. Set NODE_ENV=production on Node hosts.
 | VITE_SUPABASE_URL | browser Supabase client / AuthContext | Client build | With anon key for real session subscriptions; not required to compile/load UI |
 | VITE_SUPABASE_ANON_KEY | browser Supabase client / AuthContext | Client build, public | Pair with URL; never replace with service-role key |
 | VITE_PAYSTACK_PUBLIC_KEY | Paystack components | Client build, public | Required for real inline payments; missing enables existing demo UI |
-| SUPABASE_URL | server SDK, create-admin | Server/scripts | Required at boot; project endpoint |
-| SUPABASE_SERVICE_ROLE_KEY | server SDK, create-admin | Server/scripts, secret | Required at boot; privileged database/storage/auth access |
+| SUPABASE_URL | server SDK | Server | Required at boot; project endpoint |
+| SUPABASE_ANON_KEY | server SDK | Server, public | Required at boot; public anon/publishable key — RLS-guarded, no privileged access |
 | ADMIN_JWT_SECRET | token service, token generation | Server/scripts, secret | Required at boot; independent admin signing secret |
-| ADMIN_REGISTRATION_SECRET | registration controller | Server, secret | Optional; missing disables HTTP provisioning (503) |
 | PAYSTACK_SECRET_KEY | payment verification controller | Server, secret | Required for real payments; missing permits existing demo behavior |
 | CORS_ORIGIN | Express middleware | Server | Exact comma-separated frontend origins for split hosting; localhost also currently allowed |
 | PORT | server entrypoints | Server | Optional, default 3001; dev proxy is fixed to 3001 |
 | NODE_ENV | dev entrypoint, Express, Docker | Server/tooling | Set production on production host; do not use production for npm run dev |
 | BASE_URL | security-check.mjs | Test only | Running isolated test server origin; local runner supplies it |
 
-Legacy aliases SUPABASE_SERVICE_URL, NEXT_PUBLIC_SUPABASE_URL and VITE_SUPABASE_URL
-are still read by create-admin as URL fallbacks; SUPABASE_SERVICE_KEY is a
-server-only legacy key alias. Prefer SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY.
-The Vite compatibility configuration also exposes NEXT_PUBLIC_* values; never
-put secrets under that prefix either. No additional aliases are required for
-normal client/server startup. The root .env.example is documentation; runtime
-server loading targets server/.env, while bootstrap scripts can read root .env.
-Only environment variable names, never values, are included in startup errors.
+The server reads only SUPABASE_URL, SUPABASE_ANON_KEY and ADMIN_JWT_SECRET to
+boot. No service-role/service key, alias or fallback exists anywhere in the
+runtime: RLS is never bypassed. Admin write authorization comes from the admin's
+own Supabase session (Supabase Auth, verified at login and stored server-side),
+while public operations use the anon context. The Vite compatibility
+configuration also exposes NEXT_PUBLIC_* values; never put secrets under that
+prefix. The root .env.example is documentation; runtime server loading targets
+server/.env, while bootstrap scripts can read root .env. Only environment
+variable names, never values, are included in startup errors.
 
 ## Verification
 

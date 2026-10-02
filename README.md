@@ -9,7 +9,7 @@ peace-apparel/
 ├── client/          # Vite + React 19 + Tailwind v4 frontend (canonical)
 ├── server/          # Express + Supabase API (canonical)
 ├── supabase/        # Database verification notes; real baseline still BLOCKED
-├── scripts/         # Admin bootstrap (create-admin, generate-admin-token, security-check)
+├── scripts/         # Admin tooling (generate-admin-token, security-check)
 └── package.json     # Orchestrator scripts (dev, build, lint, typecheck)
 ```
 
@@ -112,9 +112,11 @@ apply the quarantined draft SQL. See [database notes](supabase/README.md).
 
 See [the environment inventory](README_DEPLOY.md#environment-inventory),
 client/.env.example and server/.env.example. Only browser-safe VITE_* values
-belong in the client. Server startup requires SUPABASE_URL,
-SUPABASE_SERVICE_ROLE_KEY and ADMIN_JWT_SECRET. Missing values fail explicitly;
-there is no offline database fallback. Never commit real credentials.
+belong in the client. Server startup requires SUPABASE_URL, SUPABASE_ANON_KEY
+and ADMIN_JWT_SECRET. Missing values fail explicitly; there is no offline
+database fallback. The anon key is the public/publishable key — the server holds
+no service-role credential and relies on RLS plus the signed-in admin's Supabase
+session. Never commit real credentials.
 
 ## Local Development
 
@@ -181,14 +183,16 @@ npm start
 - **Public vs admin:** catalog/content reads, newsletter signup, order creation,
   payment verification and login are public. Administrative writes, analytics,
   settings, subscriber reads, order reads/updates/deletes and uploads require
-  an admin JWT. Registration uses its separate provisioning secret.
-- **Rate limiting:** sensitive auth endpoints (`/api/admin-auth`,
-  `/api/register-admin`) are rate-limited.
+  an admin JWT backed by a live Supabase admin session.
+- **Rate limiting:** sensitive auth endpoints (`/api/admin-auth`) are rate-limited.
 - **Security headers:** Helmet.
 - **CORS:** explicit origin allowlist via `CORS_ORIGIN`, plus localhost origins
   currently allowed in all environments — not `*`.
-- **Admin registration:** refuses to run (`503`) when `ADMIN_REGISTRATION_SECRET`
-  is unset; role is assigned server-side and never taken from the request body.
+- **Admin provisioning:** there is no HTTP provisioning endpoint. Admin status is
+  membership in the `public.admin_users` table, granted by an existing admin or
+  one-time SQL in the Supabase dashboard (see the RLS migration). Role is never
+  taken from the request body, and the server holds no privileged database
+  credential — every admin write runs under the admin's own Supabase identity.
 - **Known limitation:** the admin JWT is stored in `localStorage` on the client.
 
 After building, run `node scripts/serving-check.mjs` for built SPA routing without

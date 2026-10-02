@@ -53,7 +53,7 @@ export async function createCategory(req, res) {
     const name = cleanName(req.body && req.body.name)
     if (!name) return res.status(400).json({ error: 'Category name is required' })
     // Whitelisted insert: clients cannot set id, sort_order or created_at.
-    const { data, error } = await supabase
+    const { data, error } = await req.supabase
       .from('categories')
       .insert({ name })
       .select(PUBLIC_CATEGORY_SELECT)
@@ -79,7 +79,7 @@ export async function updateCategory(req, res) {
     if (!id) return res.status(400).json({ error: 'Category id is required' })
     const trimmed = cleanName(name)
     if (!trimmed) return res.status(400).json({ error: 'Category name is required' })
-    const { data, error } = await supabase
+    const { data, error } = await req.supabase
       .from('categories')
       .update({ name: trimmed })
       .eq('id', id)
@@ -105,7 +105,7 @@ export async function deleteCategory(req, res) {
     if (!id) return res.status(400).json({ error: 'Category id is required' })
     // Deletes only the categories row. Products keep their stored category
     // values — no cascade, no product data is touched.
-    const { error } = await supabase.from('categories').delete().eq('id', id)
+    const { error } = await req.supabase.from('categories').delete().eq('id', id)
     if (error) throw error
     res.json({ ok: true })
   } catch (err) {
